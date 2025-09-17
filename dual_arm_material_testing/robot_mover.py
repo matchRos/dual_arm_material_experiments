@@ -10,6 +10,7 @@ import subprocess
 import os
 import signal
 from datetime import datetime
+import tf.transformations as tft
 
 class RobotMover:
     def __init__(self):
@@ -17,15 +18,16 @@ class RobotMover:
 
         # Zielposition (Startposition des Roboters)
         self.target_position = rospy.get_param('~start_position', [-0.8399000197524626, 0.30141801515874383, 0.5356783348979554])  # z.B. [x, y, z]
+        self.target_orientation = rospy.get_param('~start_orientation', [1.0, 0.0, 0.0, 0.0])  # Quaternion [x, y, z, w]
 
         # Publisher für Twist
-        self.twist_pub = rospy.Publisher('/mur620a/UR10_r/twist_controller/controller_input', Twist, queue_size=10)
+        self.twist_pub = rospy.Publisher('/mur620a/UR10_r/twist_controller/command_collision_free', Twist, queue_size=10)
 
         # Subscriber für Pose
         rospy.Subscriber('/mur620a/UR10_r/ur_calibrated_pose', PoseStamped, self.pose_callback)
 
         self.current_pose = None
-        self.rate = rospy.Rate(10)  # 10 Hz
+        self.rate = rospy.Rate(100)  # 10 Hz
 
     def pose_callback(self, msg):
         self.current_pose = msg.pose
@@ -92,13 +94,60 @@ class RobotMover:
             twist = Twist()
             twist.linear.x = 0.5 * (self.target_position[0] - self.current_pose.position.x)
             twist.linear.y = 0.5 * (self.target_position[1] - self.current_pose.position.y)
-            twist.linear.z = 3.5 * (self.target_position[2] - self.current_pose.position.z)
+            twist.linear.z = 0.5 * (self.target_position[2] - self.current_pose.position.z) 
 
+            
             # Begrenzung der Geschwindigkeit
             max_vel = 0.1  # m/s
             twist.linear.x = max(-max_vel, min(twist.linear.x, max_vel))
             twist.linear.y = max(-max_vel, min(twist.linear.y, max_vel))
             twist.linear.z = max(-max_vel, min(twist.linear.z, max_vel))
+
+
+
+
+            self.twist_pub.publish(twist)
+            self.rate.sleep()
+
+    def reset_orientation(self):
+
+        while not rospy.is_shutdown():
+            if self.current_pose is None:
+                rospy.loginfo("Warte auf aktuelle Pose...")
+                self.rate.sleep()
+                continue
+
+            # Orientierung korrigieren 
+            current_orientation_euler = euler_from_quaternion([
+                self.current_pose.orientation.x,
+                self.current_pose.orientation.y,
+                self.current_pose.orientation.z,
+                self.current_pose.orientation.w
+            ])
+            target_orientation_euler = euler_from_quaternion(self.target_orientation)   
+            orientation_error = [target_orientation_euler[i] - current_orientation_euler[i] for i in range(3)]
+
+            # if all(abs(err) < 0.01 for err in orientation_error):
+            #     rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
+            #     self.publish_zero_twist()
+            #     break
+
+            if abs(orientation_error[2]) < 0.01:
+                rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
+                self.publish_zero_twist()
+                break
+
+            twist = Twist()
+            twist.angular.x = 0.0 * orientation_error[0]
+            twist.angular.y = 0.0 * orientation_error[1]
+            twist.angular.z = 0.5 * orientation_error[2] 
+
+            max_ang_vel = 0.3  # rad/s
+            twist.angular.x = max(-max_ang_vel, min(twist.angular.x, max_ang_vel))
+            twist.angular.y = max(-max_ang_vel, min(twist.angular.y, max_ang_vel))
+            twist.angular.z = max(-max_ang_vel, min(twist.angular.z, max_ang_vel))
+
+            print(orientation_error)
 
             self.twist_pub.publish(twist)
             self.rate.sleep()
@@ -205,12 +254,17 @@ class RobotMover:
         # Jetzt Rückfahrt
         rospy.loginfo("Fahre zurück zur Startposition...")
         self.move_to_start_fast()
+        self.reset_orientation()
 
 
 if __name__ == '__main__':
     try:
+        time.sleep(5)
         mover = RobotMover()
-        mover.record_measurement(move_z_mm=35.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=4.0, t2=2.0)
+        mover.move_to_start_fast()
+        mover.reset_orientation()
+        # Beispielaufruf der Messung
+        mover.record_measurement(move_z_mm=40.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=180.0, t1=12.0, t2=2.0)
         #mover.move_to_start()
     except rospy.ROSInterruptException:
         pass
