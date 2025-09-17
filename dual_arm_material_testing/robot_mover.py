@@ -137,6 +137,7 @@ class RobotMover:
                 self.publish_zero_twist()
                 break
 
+
             twist = Twist()
             twist.angular.x = 0.0 * orientation_error[0]
             twist.angular.y = 0.0 * orientation_error[1]
@@ -147,7 +148,10 @@ class RobotMover:
             twist.angular.y = max(-max_ang_vel, min(twist.angular.y, max_ang_vel))
             twist.angular.z = max(-max_ang_vel, min(twist.angular.z, max_ang_vel))
 
-            print(orientation_error)
+            # angular velocity has to be negative for clockwise rotation
+            if twist.angular.z > 0.05:
+                twist.angular.z = -0.05
+                rospy.logwarn_throttle(1, "Setze Drehgeschwindigkeit auf -0.05 rad/s für Uhrzeigersinn")
 
             self.twist_pub.publish(twist)
             self.rate.sleep()
@@ -179,10 +183,13 @@ class RobotMover:
         R_y_rad = math.radians(R_y_deg)
         R_z_rad = math.radians(R_z_deg)
 
+
         linear_z_velocity = move_z_m / t1
         angular_x_velocity = R_x_rad / t1
         angular_y_velocity = R_y_rad / t1
         angular_z_velocity = R_z_rad / t1
+
+
 
         twist = Twist()
         twist.linear.z = linear_z_velocity
@@ -259,12 +266,14 @@ class RobotMover:
 
 if __name__ == '__main__':
     try:
-        time.sleep(5)
-        mover = RobotMover()
-        mover.move_to_start_fast()
-        mover.reset_orientation()
-        # Beispielaufruf der Messung
-        mover.record_measurement(move_z_mm=40.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=180.0, t1=12.0, t2=2.0)
-        #mover.move_to_start()
+        #time.sleep(5)
+        for i in range(0,3):
+            rospy.loginfo(f"Durchlauf {i+1}/3")
+            mover = RobotMover()
+            mover.move_to_start_fast()
+            mover.reset_orientation()
+            # Beispielaufruf der Messung
+            mover.record_measurement(move_z_mm=30.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=170.0, t1=15.0, t2=2.0)
+            #mover.move_to_start()
     except rospy.ROSInterruptException:
         pass
