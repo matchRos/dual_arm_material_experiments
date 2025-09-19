@@ -95,21 +95,21 @@ class RobotMover:
                 elif orientation_error[i] < -math.pi:
                     orientation_error[i] += 2 * math.pi
 
-            # if all(abs(err) < 0.01 for err in orientation_error):
-            #     rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
-            #     self.publish_zero_twist()
-            #     break
-
-            if abs(orientation_error[2]) < 0.01:
+            if all(abs(err) < 0.01 for err in orientation_error):
                 rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
                 self.publish_zero_twist()
                 break
 
+            # if abs(orientation_error[2]) < 0.01:
+            #     rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
+            #     self.publish_zero_twist()
+            #     break
+
 
             twist = Twist()
-            twist.angular.x = 0.0 * orientation_error[0]
-            twist.angular.y = 0.0 * orientation_error[1]
-            twist.angular.z = 0.5 * orientation_error[2] 
+            twist.angular.x = 0.2 * orientation_error[0]
+            twist.angular.y = 0.2 * orientation_error[1]
+            twist.angular.z = 0.2 * orientation_error[2] 
 
             max_ang_vel = 0.3  # rad/s
             twist.angular.x = max(-max_ang_vel, min(twist.angular.x, max_ang_vel))
@@ -227,23 +227,25 @@ class RobotMover:
 
         # Jetzt Rückfahrt
         rospy.loginfo("Fahre zurück zur Startposition...")
-        self.move_to_start_fast()
         self.reset_orientation()
 
+        self.move_to_start_fast()
+        
 
 if __name__ == '__main__':
     try:
         #time.sleep(5)
-        for i in range(0,30):
+        for i in range(1,10):
             if rospy.is_shutdown():
                 break   
             rospy.loginfo(f"Durchlauf {i+1}/25")
             mover = RobotMover()
-            mover.move_to_start_fast()
             mover.reset_orientation()
+            mover.move_to_start_fast()
+
             # Beispielaufruf der Messung
-            mover.record_measurement(move_z_mm=i*2.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=i*5.0, t1=4.0+i*0.2, t2=2.0)
-            #mover.record_measurement(move_z_mm=50.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=100.0, t1=8, t2=2.0)
+            mover.record_measurement(move_z_mm=0.0, R_x_deg=0.0, R_y_deg=-i*5.0, R_z_deg=0.0, t1=4.0+i*0.2, t2=2.0)
+            #mover.record_measurement(move_z_mm=0.0, R_x_deg=00.0, R_y_deg=-40.0, R_z_deg=0.0, t1=5, t2=2.0)
             #mover.move_to_start()
     except rospy.ROSInterruptException:
         pass
