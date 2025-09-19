@@ -146,12 +146,13 @@ class RobotMover:
 
         rate = rospy.Rate(100)
 
+        # Umrechnung Einheiten grad zu rad, mm zu m
         move_z_m = move_z_mm / 1000.0
         R_x_rad = math.radians(R_x_deg)
         R_y_rad = math.radians(R_y_deg)
         R_z_rad = math.radians(R_z_deg)
 
-
+        # Berechnung der benötigten Geschwindigkeiten
         linear_z_velocity = move_z_m / t1
         angular_x_velocity = R_x_rad / t1
         angular_y_velocity = R_y_rad / t1
@@ -177,8 +178,6 @@ class RobotMover:
 
         rospy.loginfo(f"Pausiere nach Bewegung für {t2} Sekunden...")
         rospy.sleep(t2)
-
-
 
     def record_measurement(self, move_z_mm=0.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=2.0, t2=2.0):
         """
