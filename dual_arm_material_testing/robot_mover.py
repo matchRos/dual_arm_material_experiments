@@ -90,10 +90,7 @@ class RobotMover:
             orientation_error = [target_orientation_euler[i] - current_orientation_euler[i] for i in range(3)]
 
             for i in range(3):
-                if orientation_error[i] > math.pi:
-                    orientation_error[i] -= 2 * math.pi
-                elif orientation_error[i] < -math.pi:
-                    orientation_error[i] += 2 * math.pi
+                orientation_error[i] = math.atan2(math.sin(orientation_error[i]), math.cos(orientation_error[i]))
 
             if all(abs(err) < 0.01 for err in orientation_error):
                 rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
@@ -107,9 +104,9 @@ class RobotMover:
 
 
             twist = Twist()
-            twist.angular.x = 0.2 * orientation_error[0]
-            twist.angular.y = 0.2 * orientation_error[1]
-            twist.angular.z = 0.2 * orientation_error[2] 
+            twist.angular.x = 0.5 * orientation_error[0]
+            twist.angular.y = 0.5 * orientation_error[1]
+            twist.angular.z = 0.5 * orientation_error[2] 
 
             max_ang_vel = 0.3  # rad/s
             twist.angular.x = max(-max_ang_vel, min(twist.angular.x, max_ang_vel))
@@ -235,7 +232,7 @@ class RobotMover:
 if __name__ == '__main__':
     try:
         #time.sleep(5)
-        for i in range(1,10):
+        for i in range(1,15):
             if rospy.is_shutdown():
                 break   
             rospy.loginfo(f"Durchlauf {i+1}/25")
@@ -244,7 +241,10 @@ if __name__ == '__main__':
             mover.move_to_start_fast()
 
             # Beispielaufruf der Messung
-            mover.record_measurement(move_z_mm=0.0, R_x_deg=0.0, R_y_deg=-i*5.0, R_z_deg=0.0, t1=4.0+i*0.2, t2=2.0)
+            #mover.record_measurement(move_z_mm=0.0, R_x_deg=i*5.0, R_y_deg=0.0, R_z_deg=0.0, t1=4.0+i*0.2, t2=2.0)
+
+            mover.record_measurement(move_z_mm=i*5.0, R_x_deg=0.0, R_y_deg=-i*4.0, R_z_deg=i*8.0, t1=4.0+i*0.2, t2=2.0)
+
             #mover.record_measurement(move_z_mm=0.0, R_x_deg=00.0, R_y_deg=-40.0, R_z_deg=0.0, t1=5, t2=2.0)
             #mover.move_to_start()
     except rospy.ROSInterruptException:
