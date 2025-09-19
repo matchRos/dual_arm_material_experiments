@@ -36,44 +36,11 @@ class RobotMover:
         if self.current_pose is None:
             return float('inf')
 
-
-        print(self.target_position)
-        print(self.current_pose.position)
         dx = self.target_position[0] - self.current_pose.position.x
         dy = self.target_position[1] - self.current_pose.position.y
         dz = self.target_position[2] - self.current_pose.position.z
         #return sqrt(dx**2 + dy**2 + dz**2)
         return abs(dz)
-
-    def move_to_start(self, tolerance=0.0005):
-        while not rospy.is_shutdown():
-            if self.current_pose is None:
-                rospy.loginfo("Warte auf aktuelle Pose...")
-                self.rate.sleep()
-                continue
-
-            distance = self.distance_to_target()
-            rospy.loginfo(f"Aktueller Abstand zur Zielposition: {distance:.4f} m")
-
-            if distance < tolerance:
-                rospy.loginfo("Roboter ist in der Startposition.")
-                self.publish_zero_twist()
-                break
-
-            # Steuerung per Proportionalregelung
-            twist = Twist()
-            twist.linear.x = 0.5 * (self.target_position[0] - self.current_pose.position.x)
-            twist.linear.y = 0.5 * (self.target_position[1] - self.current_pose.position.y)
-            twist.linear.z = 0.5 * (self.target_position[2] - self.current_pose.position.z)
-
-            # Begrenzung der Geschwindigkeit
-            max_vel = 0.1  # m/s
-            twist.linear.x = max(-max_vel, min(twist.linear.x, max_vel))
-            twist.linear.y = max(-max_vel, min(twist.linear.y, max_vel))
-            twist.linear.z = max(-max_vel, min(twist.linear.z, max_vel))
-
-            self.twist_pub.publish(twist)
-            self.rate.sleep()
 
     def move_to_start_fast(self, tolerance=0.0005):
         while not rospy.is_shutdown():
@@ -83,7 +50,6 @@ class RobotMover:
                 continue
 
             distance = self.distance_to_target()
-            rospy.loginfo(f"Aktueller Abstand zur Zielposition: {distance:.4f} m")
 
             if distance < tolerance:
                 rospy.loginfo("Roboter ist in der Startposition.")
@@ -96,15 +62,11 @@ class RobotMover:
             twist.linear.y = 0.5 * (self.target_position[1] - self.current_pose.position.y)
             twist.linear.z = 0.5 * (self.target_position[2] - self.current_pose.position.z) 
 
-            
             # Begrenzung der Geschwindigkeit
             max_vel = 0.1  # m/s
             twist.linear.x = max(-max_vel, min(twist.linear.x, max_vel))
             twist.linear.y = max(-max_vel, min(twist.linear.y, max_vel))
             twist.linear.z = max(-max_vel, min(twist.linear.z, max_vel))
-
-
-
 
             self.twist_pub.publish(twist)
             self.rate.sleep()
@@ -126,6 +88,12 @@ class RobotMover:
             ])
             target_orientation_euler = euler_from_quaternion(self.target_orientation)   
             orientation_error = [target_orientation_euler[i] - current_orientation_euler[i] for i in range(3)]
+
+            for i in range(3):
+                if orientation_error[i] > math.pi:
+                    orientation_error[i] -= 2 * math.pi
+                elif orientation_error[i] < -math.pi:
+                    orientation_error[i] += 2 * math.pi
 
             # if all(abs(err) < 0.01 for err in orientation_error):
             #     rospy.loginfo("Roboter hat die Zielorientierung erreicht.")
@@ -149,8 +117,8 @@ class RobotMover:
             twist.angular.z = max(-max_ang_vel, min(twist.angular.z, max_ang_vel))
 
             # angular velocity has to be negative for clockwise rotation
-            if twist.angular.z > 0.05:
-                twist.angular.z = -0.05
+            if twist.angular.z > 0.1:
+                twist.angular.z = -0.1
                 rospy.logwarn_throttle(1, "Setze Drehgeschwindigkeit auf -0.05 rad/s für Uhrzeigersinn")
 
             self.twist_pub.publish(twist)
@@ -267,13 +235,16 @@ class RobotMover:
 if __name__ == '__main__':
     try:
         #time.sleep(5)
-        for i in range(0,3):
-            rospy.loginfo(f"Durchlauf {i+1}/3")
+        for i in range(0,30):
+            if rospy.is_shutdown():
+                break   
+            rospy.loginfo(f"Durchlauf {i+1}/25")
             mover = RobotMover()
             mover.move_to_start_fast()
             mover.reset_orientation()
             # Beispielaufruf der Messung
-            mover.record_measurement(move_z_mm=30.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=170.0, t1=15.0, t2=2.0)
+            mover.record_measurement(move_z_mm=i*2.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=i*5.0, t1=4.0+i*0.2, t2=2.0)
+            #mover.record_measurement(move_z_mm=50.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=100.0, t1=8, t2=2.0)
             #mover.move_to_start()
     except rospy.ROSInterruptException:
         pass
