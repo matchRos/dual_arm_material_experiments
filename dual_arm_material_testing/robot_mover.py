@@ -18,7 +18,8 @@ class RobotMover:
         rospy.init_node('robot_mover', anonymous=True)
 
         # Zielposition (Startposition des Roboters)
-        self.target_position = rospy.get_param('~start_position', [-0.8377347821936557, 0.2997157486841853, 0.2280581523392366+0.276-0.0124])  # z.B. [x, y, z]
+        #self.target_position = rospy.get_param('~start_pos', [0.33263377919966164, -0.028678860128717395, -0.028678860128717395])  # z.B. [x, y, z]
+        self.target_position = rospy.get_param('~start_pos', [-0.8320953268242405, 0.3489168508730299, 0.499])  # z.B. [x, y, z]
         self.target_orientation = rospy.get_param('~start_orientation', [1.0, 0.0, 0.0, 0.0])  # Quaternion [x, y, z, w]
 
         # Publisher für Twist
@@ -60,10 +61,12 @@ class RobotMover:
                 continue
 
             distance = self.distance_to_target()
+            print(f"Aktueller Abstand zur Zielposition: {distance:.6f} m")
 
             if distance < tolerance:
                 rospy.loginfo("Roboter ist in der Startposition.")
                 self.publish_zero_twist()
+                rospy.sleep(1.0)
                 break
 
             # Steuerung per Proportionalregelung
@@ -135,7 +138,7 @@ class RobotMover:
         self.integral += error * self.dt
         derivative = (error - self.prev_error) / self.dt
         self.prev_error = error
-        print(self.Kp*error + self.Ki*self.integral + self.Kd*derivative)
+        #print(self.Kp*error + self.Ki*self.integral + self.Kd*derivative)
         return self.Kp*error + self.Ki*self.integral + self.Kd*derivative
 
     def publish_zero_twist(self):
@@ -211,8 +214,10 @@ class RobotMover:
         topics = [
             "/mur620a/UR10_l/wrench",
             "/mur620a/UR10_r/wrench",
+            "/mur620b/UR10_r/wrench",
             "/mur620a/UR10_l/ur_calibrated_pose",
-            "/mur620a/UR10_r/ur_calibrated_pose"
+            "/mur620a/UR10_r/ur_calibrated_pose",
+            "/mur620b/UR10_r/ur_calibrated_pose"
         ]
         cmd = ["rosbag", "record", "-O", filepath] + topics
 
@@ -249,7 +254,7 @@ class RobotMover:
 if __name__ == '__main__':
     try:
         #time.sleep(5)
-        for i in range(0,15):
+        for i in range(0,1):
             if rospy.is_shutdown():
                 break   
             rospy.loginfo(f"Durchlauf {i+1}/25")
@@ -258,9 +263,9 @@ if __name__ == '__main__':
             mover.move_to_start_fast()
 
             # Beispielaufruf der Messung
-            mover.record_measurement(move_z_mm=i*1, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0, t1=2.0+i*0.2, t2=2.0)
+            #mover.record_measurement(move_z_mm=i*1, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0, t1=2.0+i*0.2, t2=2.0)
 
-            #mover.record_measurement(move_z_mm=i*5.0, R_x_deg=0.0, R_y_deg=-i*4.0, R_z_deg=i*8.0, t1=4.0+i*0.2, t2=2.0)
+            mover.record_measurement(move_z_mm=10.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=5.0, t2=180.0)
 
             #mover.record_measurement(move_z_mm=-5, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=5, t2=2.0)
             #mover.move_to_start()
