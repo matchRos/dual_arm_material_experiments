@@ -22,7 +22,7 @@ class Robot2Mover():
         self.current_pose = None
         self.current_pose = None
         self.Kp, self.Ki, self.Kd = 0.8, 0.08, 0.1
-        self.target_position = [0.5996488732821253, 0.13827128899619845, 0.3676819607615602+0.015]  # Beispiel-Zielposition (x, y, z) in Metern
+        self.target_position = [0.5194602649195788, 0.13295202609939683, 0.3640579050787734+0.005]  # Beispiel-Zielposition (x, y, z) in Metern
         
         self.integral = 0
         self.prev_error = 0
@@ -136,13 +136,13 @@ if __name__ == "__main__":
     rospy.sleep(0.1)  # Warte auf Initialisierung
     mover.move_to_start_fast()
 
-    for i in range(0,10):
+    for i in range(0,11):
         if rospy.is_shutdown():
             break
         rospy.sleep(1.0)  # Warte auf Initialisierung
         mover.move_to_start_fast()
         mover.execute_combined_motion_no_return(
-            move_x_mm=i * 4.0, 
+            move_x_mm=i * 1.0, 
             t1=4.0, 
             t2=2.0
         )

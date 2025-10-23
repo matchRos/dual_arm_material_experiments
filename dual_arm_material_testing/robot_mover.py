@@ -19,7 +19,7 @@ class RobotMover:
 
         # Zielposition (Startposition des Roboters)
         #self.target_position = rospy.get_param('~start_pos', [0.33263377919966164, -0.028678860128717395, -0.028678860128717395])  # z.B. [x, y, z]
-        self.target_position = rospy.get_param('~start_pos', [-0.8320953268242405, 0.3489168508730299, 0.499+0.005])  # z.B. [x, y, z]
+        self.target_position = rospy.get_param('~start_pos', [-0.8320953268242405, 0.3489168508730299, 0.497+0.00])  # z.B. [x, y, z]
         self.target_orientation = rospy.get_param('~start_orientation', [1.0, 0.0, 0.0, 0.0])  # Quaternion [x, y, z, w]
 
         # Publisher für Twist
@@ -49,7 +49,7 @@ class RobotMover:
         #return sqrt(dx**2 + dy**2 + dz**2)
         return abs(dz)
 
-    def move_to_start_fast(self, tolerance=0.0005):
+    def move_to_start_fast(self, tolerance=0.0002):
 
         self.integral = 0
         self.prev_error = 0
@@ -194,7 +194,13 @@ class RobotMover:
         self.publish_zero_twist()
 
         rospy.loginfo(f"Pausiere nach Bewegung für {t2} Sekunden...")
-        rospy.sleep(t2)
+        # rospy.sleep(t2)
+        start_time = rospy.Time.now().to_sec()
+        while not rospy.is_shutdown():
+            elapsed = rospy.Time.now().to_sec() - start_time
+            if elapsed >= t2:
+                break
+            rate.sleep()
 
     def record_measurement(self, move_z_mm=0.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=2.0, t2=2.0):
         """
@@ -265,7 +271,7 @@ if __name__ == '__main__':
             # Beispielaufruf der Messung
             #mover.record_measurement(move_z_mm=i*1, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0, t1=2.0+i*0.2, t2=2.0)
 
-            #mover.record_measurement(move_z_mm=40.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=5.0, t2=180.0)
+            mover.record_measurement(move_z_mm=10.0, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=5.0, t2=240.0)
 
             #mover.record_measurement(move_z_mm=-5, R_x_deg=0.0, R_y_deg=0.0, R_z_deg=0.0, t1=5, t2=2.0)
             #mover.move_to_start()
